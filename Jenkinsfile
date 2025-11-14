@@ -18,11 +18,9 @@ pipeline {
     }
 
     stage('Build') {
-      steps {x
+      steps {
         script {
           def gitCommit = env.GIT_COMMIT ?: shReturnStdout('git rev-parse --short HEAD') ?: 'unknown'
-          // For Windows agents, adjust: use bat instead of shReturnStdout if needed.
-          // Build with label to avoid relying on git being available inside Docker builder
           bat "docker build --label org.opencontainers.image.revision=${gitCommit} -t ${IMAGE_NAME}:${IMAGE_TAG} -f Dockerfile ."
         }
       }

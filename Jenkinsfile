@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/somanadha/studentmarkservice.git'
+                git branch: 'main', url: 'https://github.com/Thasneemshaik09/studentmarkservice.git'
             }
         }
         stage('Build') {

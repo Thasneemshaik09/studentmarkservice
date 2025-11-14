@@ -1,0 +1,74 @@
+version: 2.1
+
+jobs:
+  build-and-dockerize:
+    parameters:
+      app_name:
+        type: string
+        default: "studentmarkservice"
+      image_name:
+        type: string
+        default: "studentmarkservice-image"
+      app_port:
+        type: integer
+        default: 8100
+      registry:
+        type: string
+        default: "docker.io"
+      image_tag:
+        type: string
+        default: "latest"
+
+    docker:
+      - image: cimg/openjdk:11.0.29
+
+    environment:
+      APP_NAME: << parameters.app_name >>
+      IMAGE_NAME: << parameters.image_name >>
+      APP_PORT: << parameters.app_port >>
+      REGISTRY: << parameters.registry >>
+      IMAGE_TAG: << parameters.image_tag >>
+      FULL_IMAGE_TAG: ${REGISTRY}/${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}
+
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - maven-repo-{{ checksum "pom.xml" }}
+            - maven-repo-
+      - run:
+          name: Build JAR using Maven (Skip Tests)
+          command: |
+            mvn dependency:resolve
+            mvn package -DskipTests
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: maven-repo-{{ checksum "pom.xml" }}
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Log in to Container Registry (Docker Hub)
+          command: |
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin $REGISTRY
+      - run:
+          name: Build and Push Docker Image
+          command: |
+            docker build -t ${FULL_IMAGE_TAG} .
+            docker push ${FULL_IMAGE_TAG}
+      - run:
+          name: Display Success Message
+          command: |
+          echo "Maven build and Docker image pushed successfully! Tag: ${FULL_IMAGE_TAG}"
+
+workflows:
+  version: 2
+  build_test_and_deploy:
+    jobs:
+      - build-and-dockerize:
+          filters:
+            branches:
+              only:
+                - main
+            tags:
+              ignore: /.*/
